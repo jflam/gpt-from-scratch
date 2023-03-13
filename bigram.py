@@ -8,6 +8,7 @@ MAX_ITERS = 3000
 EVAL_INTERAL = 300
 LEARNING_RATE = 1e-2
 EVAL_ITERS = 200
+N_EMBED = 32
 
 torch.manual_seed(1337)
 
@@ -46,22 +47,48 @@ def get_batch(split):
 
 # Define the Bigram Language Model
 class BigramLanguageModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         super().__init__()
 
         # Construct the embedding table which represents each token in the
         # vocabulary as a vector of learnable parameters. This table
         # is trained (modified) during the training process.
-        self.token_embedding_table = nn.Embedding(vocab_size, vocab_size)
+
+        # The addition of the linear layer lets us shrink dramatically the
+        # size of the embedding table. This is a common technique to reduce
+        # the number of parameters in a model. The embedding table is
+        # typically very large (vocab_size x vocab_size) and this is
+        # problematic for training. 
+        self.token_embedding_table = nn.Embedding(VOCAB_SIZE, VOCAB_SIZE)
+        # self.token_embedding_table = nn.Embedding(VOCAB_SIZE, N_EMBED)
+
+        # This table is used to look up the token position in the block
+        # self.position_embedding_table = nn.Embedding(BLOCK_SIZE, N_EMBED)
+
+        # New version adds a linear layer to map the embedding table to
+        # the vocabulary size
+        # self.lm_head = nn.Linear(N_EMBED, VOCAB_SIZE)
 
     def forward(self, idx, targets=None):
+
+        # From previous version
+        logits = self.token_embedding_table(idx) 
+
+        # Given the input token, lookup the token embedding from the table
+        # tok_emb = self.token_embedding_table(idx)
+
+        # I don't understand this part
+        # pos_emb = self.position_embedding_table(torch.arange(BLOCK_SIZE, 
+                                                            #  device=device))
+        # x = tok_emb + pos_emb 
+        
         # Get the prediction from the embedding table
         # This is in the structure of [batch_size, block_size, vocab_size]
         # Note that Andrej likes to use time as the dimension to refer to
         # for the block_size because it represents a sequence of tokens
         # that are output over TIME. 
         # So this is (B,T,C)- Batch, Time, Channel
-        logits = self.token_embedding_table(idx) 
+        # logits = self.lm_head(x)
 
         # If we are doing inferencing, we skip the computation of loss
         if targets is None:
@@ -138,7 +165,7 @@ def estimate_loss(m):
     return out
 
 # Now let's train the model
-m = BigramLanguageModel(VOCAB_SIZE).to(device)
+m = BigramLanguageModel().to(device)
 
 # Create an optimizer to use for training
 optimizer = torch.optim.AdamW(m.parameters(), lr=LEARNING_RATE)
@@ -165,4 +192,4 @@ for iter in range(MAX_ITERS):
 context = torch.zeros((1,1), dtype=torch.long, device=device)
 
 # Run the model in inferencing
-print(decode(m.generate(context, max_new_tokens=100)[0].tolist()))
+print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
