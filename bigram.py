@@ -193,3 +193,7 @@ context = torch.zeros((1,1), dtype=torch.long, device=device)
 
 # Run the model in inferencing
 print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
+
+# Number of parameters is equal to VOCAB_SIZE * VOCAB_SIZE
+num_p = sum(p.numel() for p in m.parameters())
+print(f"Number of parameters in the model: {num_p}")
